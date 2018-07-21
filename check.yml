@@ -1,0 +1,5 @@
+- name: TEST
+  hosts: all
+  tasks:
+    - include: ping.yml
+

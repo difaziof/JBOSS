@@ -1,0 +1,2 @@
+- include: extra_certs.yml jdk_cert_var="{{ item }}"
+  with_items: "{{ java_extra_certs }}"

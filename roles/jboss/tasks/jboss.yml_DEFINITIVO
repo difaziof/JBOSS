@@ -1,0 +1,197 @@
+
+- name: check_jboss_source
+  local_action: stat path=../files/{{ jboss_zip }}.zip
+  register: source_jboss_tar_gz
+
+- name: copy installation jboss
+  copy: src=files/{{ jboss_zip }}.zip dest={{ jboss_home }} owner={{ jboss_user }} group={{ jboss_group }} mode=0644
+
+- name: check if the joss_home exists
+  stat: path="{{ jboss_config_dir }}"
+  register: jboss_real_home_check
+
+- name: unarchive {{ jboss_zip }}.zip
+  unarchive:
+    src: "{{ jboss_home }}/{{ jboss_zip }}.zip"
+    dest: "{{ jboss_home }}"
+    owner: "{{ jboss_user }}"
+    group: "{{ jboss_group }}"
+    copy: no
+  when: jboss_real_home_check.stat.isdir is not defined or not jboss_real_home_check.stat.isdir
+
+- name: create link simbolic
+  shell: cd {{ jboss_home }} && ln -s {{ jboss_home }}/{{ jboss_ver }} jboss-eap
+
+- name: create folder master
+  shell: cp -R {{ jboss_home }}/jboss-eap/domain {{ jboss_home }}/jboss-eap/master
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: create folder slave1
+  shell: cp -R {{ jboss_home }}/jboss-eap/domain {{ jboss_home }}/jboss-eap/{{ ansible_hostname }}
+
+- name: clean configuration slave host.xml
+  file: path="{{jboss_home}}/jboss-eap/{{ansible_hostname}}/configuration/host.xml" state=absent
+
+- name: clean configuration slave domain.xml
+  file: path="{{jboss_home}}/jboss-eap/{{ansible_hostname}}/configuration/domain.xml" state=absent
+
+- name: delete sorgente zip JBOSS {{ jboss_zip }}.zip
+  file: state=absent path="{{ jboss_home }}/{{ jboss_zip }}.zip"
+
+- name: create directory scripts
+  file: path={{ jboss_home }}/scripts owner={{ jboss_user }} group={{ jboss_group }} mode=0775 state=directory recurse=no
+
+- name: copy script start master
+  template:
+    src: jboss_eap_master.sh
+    dest: "{{ jboss_home }}/scripts/jboss-eap-master.sh"
+    mode: 0755
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: copy script start init master
+  template:
+    src: jboss_eap_init_master.sh
+    dest: "{{ jboss_home }}/scripts/jboss-eap-init-master.sh"
+    mode: 0755
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: copy script start controller
+  template:
+    src: jboss_eap_controller.sh
+    dest: "{{ jboss_home }}/scripts/jboss-eap-{{ansible_hostname}}.sh"
+    mode: 0775
+
+- name: copy script start init controller
+  template:
+    src: jboss-eap-init-controller.sh
+    dest: "{{ jboss_home }}/scripts/jboss-eap-init-{{ansible_hostname}}.sh"
+    mode: 0775
+
+- name: copy add-user.sh
+  template:
+    src: add-user.sh
+    dest: "{{ jboss_home }}/jboss-eap/bin/add-user.sh"
+    mode: 0775
+
+- name: create directory jboss.conf.d
+  file: path={{ jboss_home }}/jboss-eap/jboss.conf.d owner={{ jboss_user }} group={{ jboss_group }} mode=0775 state=directory recurse=no
+
+- name: crypt secret
+  shell: echo -n "{{ jbossdomainpassword }}" | base64
+  register: secret
+- set_fact: secret={{ secret.stdout }}
+
+- set_fact: slave='{{hostvars[groups["jboss-servers"][0]].slave}}'
+  when: inventory_hostname == groups['jboss-servers'][0] 
+
+- set_fact: slave='{{hostvars[groups["jboss-servers"][1]].slave}}'
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: copy host-slave.xml
+  template:
+    src: host-slave.xml
+    dest: "{{jboss_home}}/jboss-eap/{{ansible_hostname}}/configuration/host-slave.xml"
+    mode: 0755
+
+- name: copy enviroment configuration master jboss-master.conf
+  template: src=jboss-master.conf dest={{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf mode=0777
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: copy enviroment configuration servers jboss-{{ansible_hostname}}.conf
+  template: src=jboss-controller.conf dest={{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf mode=0777
+
+- name: copy enviroment configuration master domain.xml
+  template: src=MASTER_domain.xml dest={{ jboss_home }}/jboss-eap/master/configuration/domain.xml
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: copy enviroment configuration master host-slave.xml
+  template: src=MASTER_host-slave.xml dest={{ jboss_home }}/jboss-eap/master/configuration/host-slave.xml
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: copy enviroment configuration master host.xml
+  template: src=MASTER_host.xml dest={{ jboss_home }}/jboss-eap/master/configuration/host.xml
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: copy enviroment configuration master host-master.xml
+  template: src=MASTER_host-master.xml dest={{ jboss_home }}/jboss-eap/master/configuration/host-master.xml
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Create default JBoss admin user
+  shell: ". {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf && cd {{ jboss_home }}/jboss-eap/bin && ./add-user.sh -r ManagementRealm -u {{jbossadminuser}} -p {{jbossadminpassword}}"
+  when: inventory_hostname == groups['jboss-servers'][0]
+  
+- name: Create default JBoss host user
+  shell: ". {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf && cd {{ jboss_home }}/jboss-eap/bin && ./add-user.sh -r ManagementRealm -u host -p {{jbossadminpassword}}"
+  when: inventory_hostname == groups['jboss-servers'][0]
+  
+- name: Create default JBoss admin user slave
+  shell: ". {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf && cd {{ jboss_home }}/jboss-eap/bin && ./add-user.sh -r ManagementRealm -u {{jbossadminuser}} -p {{jbossadminpassword}}"
+  when: inventory_hostname == groups['jboss-servers'][1]
+  
+- name: Create default JBoss host user slave
+  shell: ". {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf && cd {{ jboss_home }}/jboss-eap/bin && ./add-user.sh -r ManagementRealm -u host -p {{jbossadminpassword}}"
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: run admin on master
+  raw: "{{ jboss_home }}/scripts/jboss-eap-master.sh start"
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Wait for master to startup
+  wait_for:
+    delay: 20
+    timeout: 60
+    path: "{{jboss_home}}/scripts/stdout_jboss_start.out"
+    search_regex: 'OK'
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: run server on slave1
+  raw: "{{ jboss_home }}/scripts/jboss-eap-{{groups['jboss-servers'][0]}}.sh start"
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Wait for slave1 to startup
+  wait_for:
+    delay: 20
+    timeout: 60
+    path: "{{jboss_home}}/scripts/stdout_{{groups['jboss-servers'][0]}}_jboss_start.out"
+    search_regex: 'OK'
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: run server on slave2
+  raw: "{{ jboss_home }}/scripts/jboss-eap-{{groups['jboss-servers'][1]}}.sh start"
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: Wait for slave2 to startup
+  wait_for:
+    delay: 20
+    timeout: 60
+    path: "{{jboss_home}}/scripts/stdout_{{groups['jboss-servers'][1]}}_jboss_start.out"
+    search_regex: 'OK'
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: cli jboss remote_destination_outbound_socket_binding
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/socket-binding-group={{jbossprofilesockets}}/remote-destination-outbound-socket-binding=proxy1:add(host={{groups['jboss-servers'][0]}},port=16666)' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy1 is defined
+
+- name: cli jboss remote_destination_outbound_socket_binding
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/socket-binding-group={{jbossprofilesockets}}/remote-destination-outbound-socket-binding=proxy2:add(host={{groups['jboss-servers'][1]}},port=16666)' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy2 is defined
+
+- name: cli jboss Servers Group Add 1
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}1:add (profile={{jbossprofile}}, socket-binding-group={{jbossprofilesockets}})' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy1 is defined
+
+- name: cli jboss Servers Group Add 2
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}2:add (profile={{jbossprofile}}, socket-binding-group={{jbossprofilesockets}})' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy2 is defined
+
+- name: properties Servers Group Add 1
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}1/system-property=jboss.cluster.tcp.initial_hosts:add(value="{{groups['jboss-servers'][0]}}[7600],{{groups['jboss-servers'][1]}}[7600]")' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy1 is defined
+
+- name: properties Servers Group Add 2
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}2/system-property=jboss.cluster.tcp.initial_hosts:add(value="{{groups['jboss-servers'][0]}}[7600],{{groups['jboss-servers'][1]}}[7600]")' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy2 is defined
+
+- name: Reload Domain Controller
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c "/host=master:reload" --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0]

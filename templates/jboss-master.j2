@@ -1,0 +1,119 @@
+# General configuration for the init.d scripts,
+# not necessarily for JBoss AS itself.
+
+# The username who should own the process.
+#
+#echo $JBOSS_CLASSPATH
+
+export JBOSS_USER={{ jboss_user }}
+export JBOSS_HOME={{ jboss_home }}/jboss-eap
+export JAVA_HOME={{ jdk_home }}
+
+#export JBOSS_MODULEPATH="$JBOSS_HOME/modules:$JBOSS_HOME/skylib"
+#export JBOSS_MODULEPATH=/data/jboss/skylib
+#export JBOSS_CLASSPATH=`/data/jboss/skylib/ "$JBOSS_CLASSPATH"`
+#export JBOSS_CLASSPATH=`"$JBOSS_CLASSPATH":/data/jboss/skylib`
+#export JBOSS_CLASSPATH=/data/jboss/skylib #KO
+
+export JBOSS_PIDFILE=$JBOSS_HOME/pid/jboss-master.pid
+#export JBOSS_LOCKFILE=/var/lock/subsys/jboss-eap
+export JBOSS_LOCKFILE=$JBOSS_HOME/pid/jboss-master.lock
+export JBOSS_CONSOLE_LOG=$JBOSS_HOME/log/console-master.log
+export JBOSS_BASE_DIR=master
+export DOMAIN_CONF=$JBOSS_HOME/jboss.conf.d/jboss-master.conf
+
+## The mode JBoss EAP should start, standalone or domain
+export JBOSS_MODE=domain
+
+#echo dopo=$JBOSS_CLASSPATH
+
+# The amount of time to wait for startup
+#
+# STARTUP_WAIT=30
+
+# The amount of time to wait for shutdown
+#
+# SHUTDOWN_WAIT=30
+
+# Location to keep the console log
+#
+# JBOSS_CONSOLE_LOG=$JBOSS_HOME/log/jboss/console.log
+## -*- shell-script -*- ######################################################
+##                                                                          ##
+##  JBoss Bootstrap Script Configuration                                    ##
+##                                                                          ##
+##############################################################################
+
+#
+# This file is optional; it may be removed if not needed.
+#
+
+#
+# Specify the maximum file descriptor limit, use "max" or "maximum" to use
+# the default, as queried by the system.
+#
+# Defaults to "maximum"
+#
+#MAX_FD="maximum"
+
+#
+# Specify the profiler configuration file to load.
+#
+# Default is to not load profiler configuration file.
+#
+#PROFILER=""
+
+#
+# Specify the location of the Java home directory.  If set then $JAVA will
+# be defined to $JAVA_HOME/bin/java, else $JAVA will be "java".
+#
+#JAVA_HOME="{{ jdk_home }}"
+
+#
+# Specify the exact Java VM executable to use.
+#
+#JAVA=""
+
+if [ "x$JBOSS_MODULES_SYSTEM_PKGS" = "x" ]; then
+   JBOSS_MODULES_SYSTEM_PKGS="org.jboss.byteman"
+fi
+
+#
+# Specify options to pass to the Java VM.
+#
+if [ "x$JAVA_OPTS" = "x" ]; then
+   JAVA_OPTS="-{{ jboss_domain_xms }} -{{ jboss_domain_xmx }}  -Djava.net.preferIPv4Stack=true"
+   JAVA_OPTS="$JAVA_OPTS -Djboss.modules.system.pkgs=$JBOSS_MODULES_SYSTEM_PKGS -Djava.awt.headless=true"
+   JAVA_OPTS="$JAVA_OPTS -Djboss.modules.policy-permissions=true"
+   JAVA_OPTS="$JAVA_OPTS -Djboss.binding.address=$(hostname -s)"
+   JAVA_OPTS="$JAVA_OPTS -Djboss.bind.address.management=$(hostname -s)"
+   JAVA_OPTS="$JAVA_OPTS -Djboss.server.base.dir=$JBOSS_HOME/$JBOSS_BASE_DIR"
+   JAVA_OPTS="$JAVA_OPTS -Djboss.domain.base.dir=$JBOSS_HOME/$JBOSS_BASE_DIR"
+#   JAVA_OPTS="$JAVA_OPTS -classpath /data/jboss/skylib"  #KO non funziona
+else
+   echo "JAVA_OPTS already set in environment; overriding default settings with values: $JAVA_OPTS"
+fi
+
+# Use JBoss Modules lockless mode
+#JAVA_OPTS="$JAVA_OPTS -Djboss.modules.lockless=true"
+
+# Uncomment this to run with a security manager enabled
+# SECMGR="true"
+
+# The ProcessController process uses its own set of java options
+if [ "x$PROCESS_CONTROLLER_JAVA_OPTS" = "x" ]; then
+    PROCESS_CONTROLLER_JAVA_OPTS="$JAVA_OPTS"
+fi
+
+# The HostController process uses its own set of java options
+if [ "x$HOST_CONTROLLER_JAVA_OPTS" = "x" ]; then
+    HOST_CONTROLLER_JAVA_OPTS="$JAVA_OPTS"
+fi
+
+# Sample JPDA settings for remote socket debuging.
+#PROCESS_CONTROLLER_JAVA_OPTS="$PROCESS_CONTROLLER_JAVA_OPTS -agentlib:jdwp=transport=dt_socket,address=8788,server=y,suspend=n"
+#HOST_CONTROLLER_JAVA_OPTS="$HOST_CONTROLLER_JAVA_OPTS -agentlib:jdwp=transport=dt_socket,address=8787,server=y,suspend=n"
+
+# Sample JPDA settings for shared memory debugging
+#PROCESS_CONTROLLER_JAVA_OPTS="$PROCESS_CONTROLLER_JAVA_OPTS -agentlib:jdwp=transport=dt_shmem,server=y,suspend=n,address=jboss"
+#HOST_CONTROLLER_JAVA_OPTS="$HOST_CONTROLLER_JAVA_OPTS -agentlib:jdwp=transport=dt_shmem,server=y,suspend=n,address=jboss"

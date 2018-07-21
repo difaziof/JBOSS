@@ -1,0 +1,39 @@
+- name: stop jboss on host slave1
+  shell: "{{ jboss_home }}/scripts/jboss-eap-{{ ansible_hostname }}.sh stop"
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: "restart jboss on host slave1"
+  shell: "{{ jboss_home }}/scripts/jboss-eap-{{ ansible_hostname }}.sh start"
+  register: riavvio_slave1
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Wait for ports number 8180 and 8280 to be available slave1
+  wait_for:
+    host: "{{ jboss_dc }}"
+    port: "{{ item }}"
+    delay: 10
+    state: started
+  with_items:
+    - 8180
+    - 8280
+  when: inventory_hostname == groups['jboss-servers'][0] and riavvio_slave1
+
+- name: "stop jboss on host slave2"
+  shell: "{{ jboss_home }}/scripts/jboss-eap-{{ ansible_hostname }}.sh stop"
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: "start jboss on host slave2"
+  shell: "{{ jboss_home }}/scripts/jboss-eap-{{ ansible_hostname }}.sh start"
+  register: riavvio_slave2
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: Wait for ports number 8180 and 8280 to be available slave2
+  wait_for:
+    host: "{{ ansible_hostname }}"
+    port: "{{ item }}"
+    delay: 10
+    state: started
+  with_items:
+     - 8180
+     - 8280
+  when: inventory_hostname == groups['jboss-servers'][1] and riavvio_slave2

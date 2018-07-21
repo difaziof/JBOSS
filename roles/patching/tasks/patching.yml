@@ -1,0 +1,23 @@
+- name: Creates directory
+  file: path="{{ jboss_eap_download_dir }}" state=directory
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: PATCH | Copy EAP patch file to {{ jboss_eap_download_dir }}/{{ jboss_eap_patch_file | basename }}
+  copy: src="files/{{ jboss_eap_patch_file }}" dest="{{ jboss_eap_download_dir }}/{{ jboss_eap_patch_file }}"
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: PATCH | Determine if patch can be applied
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c 'patch info --host={{ item }}' --connect controller={{ jboss_dc }}:9990
+  with_items:
+    - slave1
+    - slave2
+  when: inventory_hostname == groups['jboss-servers'][0]
+  register: jboss_patch_info
+
+
+- name: PATCH | Apply JBoss EAP patch on slave1 e slave2
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c 'patch --host={{ item }} apply {{ jboss_eap_download_dir }}/{{ jboss_eap_patch_file }}' --connect controller={{ jboss_dc }}:9990
+  with_items:
+    - slave1
+    - slave2
+  when: inventory_hostname == groups['jboss-servers'][0] and "'base' in jboss_patch_info.stdout"

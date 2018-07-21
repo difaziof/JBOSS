@@ -1,0 +1,69 @@
+#- name: cli jboss remote_destination_outbound_socket_binding
+#  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/socket-binding-group={{jbossprofilesockets}}/remote-destination-outbound-socket-binding={{item.binding}}:add(host={{item.server}},port=16666)' --controller={{jboss_dc}}:9990
+#  with_items:
+#    - { binding: 'proxy1', server: 'preaolweb1.sky.local' }
+#    - { binding: 'proxy2', server: 'preaolweb2.sky.local' }
+#  when: inventory_hostname == groups['jboss-servers'][0] and proxy1 is defined and proxy2 is defined
+
+- name: cli jboss Servers Group Add A e B
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}{{item.name}}:add (profile={{jbossprofile}}, socket-binding-group={{jbossprofilesockets}})' --controller={{jboss_dc}}:9990
+  with_items:
+    - { name: 'A' }
+    - { name: 'B' }
+  when: inventory_hostname == groups['jboss-servers'][0] 
+
+- name: "Add MANAGED_SERVER1A/2A e MANAGED_SERVER1B/2B"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/host={{item.controller}}/server-config={{item.name}}:add(group={{jbossservergroups}}{{item.groups}},auto-start=true,socket-binding-port-offset={{item.offset}})' --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  with_items:
+    - { name: 'MANAGED_SERVER1A', offset: '100', groups: 'A', controller: 'slave1' }
+    - { name: 'MANAGED_SERVER1B', offset: '200', groups: 'B', controller: 'slave1' }
+    - { name: 'MANAGED_SERVER2A', offset: '100', groups: 'A', controller: 'slave2' }
+    - { name: 'MANAGED_SERVER2B', offset: '200', groups: 'B', controller: 'slave2' } 
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: "Set Heap Size to {{jbossservergroups}}A and {{jbossservergroups}}B"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}{{item.name}}/jvm=production_jvm:add(max-heap-size={{MAX_HEAP_SERVER}}m,env-classpath-ignored=false,heap-size={{MIN_HEAP_SERVER}}m,jvm-options=["-server"])' --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  with_items:    
+    - { name: 'A' }
+    - { name: 'B' }
+  when: inventory_hostname == groups['jboss-servers'][0]
+  
+- name: "set both the send and receive buffer sizes udp jgroup"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/profile=ha/subsystem=jgroups/stack=udp/transport=UDP/property={{item.name}}:add(value=130K)' --controller={{jboss_dc}}:9990
+  with_items:    
+    - { name: 'mcast_send_buf_size' }
+    - { name: 'mcast_recv_buf_size' }
+  when: inventory_hostname == groups['jboss-servers'][0] and jboss_ver == "jboss-eap-7.1"
+  
+  
+- name: "set timeout deploy"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/system-property=jboss.as.management.blocking.timeout:add(value=900)' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0]
+  
+  
+- name: properties Servers Group Add A and Add B
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}{{item.name}}/system-property=jboss.default.multicast.address:add(value="{{item.multicast}}", boot-time=true)' --controller={{jboss_dc}}:9990
+  with_items:
+    - { name: 'A', multicast: '{{MULTICAST1}}' }
+    - { name: 'B', multicast: '{{MULTICAST2}}' }
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Add module Driver jdbc oracle
+  shell: . /data/AOL_POC/jboss-eap/jboss.conf.d/jboss-master.conf; cd /data/AOL_POC/jboss-eap/bin && ./jboss-cli.sh -c '/profile=ha/subsystem=datasources/jdbc-driver=oracle:add(driver-name="OracleJDBCDriver", driver-module-name="com.oracle.jdbc", driver-class-name="oracle.jdbc.OracleDriver" )' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0]
+  
+- name: Create DataSource 1
+  shell: . /data/AOL_POC/jboss-eap/jboss.conf.d/jboss-master.conf; cd /data/AOL_POC/jboss-eap/bin && ./jboss-cli.sh -c '/profile=ha/subsystem=datasources/data-source=WebSalesDS:add( driver-class="oracle.jdbc.OracleDriver", driver-name=oracle, use-ccm=true, statistics-enabled=true, connection-url="jdbc:oracle:thin:@//colsbeamdb-scan:2525/WSALPP_LB", jndi-name="java:/WebSalesDS", user-name="USERAOL", password="useraol_coll", min-pool-size="50", max-pool-size="150", pool-prefill=true, check-valid-connection-sql="select 1 from dual", background-validation=true, background-validation-millis=30000, use-fast-fail="true" )' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0]
+  
+- name: Create DataSource 2
+  shell: . /data/AOL_POC/jboss-eap/jboss.conf.d/jboss-master.conf; cd /data/AOL_POC/jboss-eap/bin && ./jboss-cli.sh -c '/profile=ha/subsystem=datasources/data-source=WebConfSalesDS:add( driver-class="oracle.jdbc.OracleDriver", driver-name=oracle, use-ccm=true, statistics-enabled=true, connection-url="jdbc:oracle:thin:@//colsbeamdb-scan:2525/WSALPP_LB", jndi-name="java:/WebConfSalesDS", user-name="USERAOL", password="useraol_coll", min-pool-size="50", max-pool-size="150", pool-prefill=true, check-valid-connection-sql=select 1 from dual, background-validation=true, background-validation-millis=30000, use-fast-fail="true" )' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0]
+  
+#- name: "set modcluster Multicast Group"
+#  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}{{item.name}}/system-property=mycluster.modcluster.lbgroup:add(value={{item.multicast}})' --controller={{jboss_dc}}:9990
+#  with_items:    
+#    - { name: 'A', multicast: '{{MULTICAST1}}' }
+#    - { name: 'B', multicast: '{{MULTICAST2}}' }
+#  when: inventory_hostname == groups['jboss-servers'][0]
+

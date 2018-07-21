@@ -1,0 +1,83 @@
+
+- name: check_jboss_source
+  local_action: stat path=../files/{{ jboss_zip }}.zip
+  register: source_jboss_tar_gz
+
+- name: copy installation jboss
+  copy: src=files/{{ jboss_zip }}.zip dest={{ jboss_home }} owner={{ jboss_user }} group={{ jboss_group }} mode=0644
+
+- name: check if the joss_home exists
+  stat: path="{{ jboss_config_dir }}"
+  register: jboss_real_home_check
+
+- name: unarchive {{ jboss_zip }}.zip
+  unarchive:
+    src: "{{ jboss_home }}/{{ jboss_zip }}.zip"
+    dest: "{{ jboss_home }}"
+    owner: "{{ jboss_user }}"
+    group: "{{ jboss_group }}"
+    copy: no
+  when: jboss_real_home_check.stat.isdir is not defined or not jboss_real_home_check.stat.isdir
+
+- name: create link simbolic
+  shell: cd {{ jboss_home }} && ln -s {{ jboss_home }}/{{ jboss_ver }} jboss-eap
+
+- name: create folder master
+  shell: cp -R {{ jboss_home }}/jboss-eap/domain {{ jboss_home }}/jboss-eap/master
+
+- name: create folder controller
+  shell: cp -R {{ jboss_home }}/jboss-eap/domain {{ jboss_home }}/jboss-eap/{{ ansible_hostname }}
+
+- name: delete sorgente jdk
+  file: state=absent path="{{ jboss_home }}/{{ jboss_zip }}.zip"
+
+- name: create directory scripts
+  file: path={{ jboss_home }}/scripts owner={{ jboss_user }} group={{ jboss_group }} mode=0775 state=directory recurse=no
+
+- name: copy script start master
+  template:
+    src: jboss_as_master.sh 
+    dest: "{{ jboss_home }}/scripts/jboss-eap-master.sh"
+    mode: 0755
+
+- name: copy script start controller
+  template:
+    src: jboss_as_controller.sh 
+    dest: "{{ jboss_home }}/scripts/jboss-eap-controller.sh"
+    mode: 0755
+
+- name: create directory jboss.conf.d
+  file: path={{ jboss_home }}/jboss-eap/jboss.conf.d owner={{ jboss_user }} group={{ jboss_group }} mode=0775 state=directory recurse=no
+
+- name: create directory log
+  file: path={{ jboss_home }}/jboss-eap/log owner={{ jboss_user }} group={{ jboss_group }} mode=0775 state=directory recurse=no
+
+- name: crypt secret
+  shell: echo -n "{{ jbossdomainpassword }}" | base64
+  register: secret
+- set_fact: secret={{ secret.stdout }}
+
+- name: copy enviroment configuration master jboss-master.conf
+  template: src=master_jboss-master.j2 dest={{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf
+
+- name: copy enviroment configuration master domain.xml
+  template: src=master_domain.xml dest={{ jboss_home }}/jboss-eap/master/configuration/domain.xml
+
+- name: copy enviroment configuration master host-slave.xml
+  template: src=master_host-slave.j2 dest={{ jboss_home }}/jboss-eap/master/configuration/host-slave.xml
+
+- name: copy enviroment configuration master host.xml
+  template: src=master_host.j2 dest={{ jboss_home }}/jboss-eap/master/configuration/host.xml
+
+- name: copy enviroment configuration master host-master.xml
+  template: src=master_host-master.j2 dest={{ jboss_home }}/jboss-eap/master/configuration/host-master.xml
+
+- name: copy enviroment configuration controller jboss-{{ ansible_hostname }}.conf
+  template: src=controller_jboss.j2 dest={{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ ansible_hostname }}.conf
+
+- name: copy enviroment configuration controller host-slave.xml
+  template: src=controller_host-slave.j2 dest={{ jboss_home }}/jboss-eap/{{ ansible_hostname }}/configuration/host-slave.xml
+
+- name: copy enviroment configuration controller host.xml
+  template: src=controller_host.j2 dest={{ jboss_home }}/jboss-eap/{{ ansible_hostname }}/configuration/host.xml
+

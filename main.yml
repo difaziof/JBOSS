@@ -1,0 +1,22 @@
+---
+- name: DISTRIBUTION
+  hosts: jboss-servers
+
+  vars_files:
+   - vars/jdk_vars.yml
+   - vars/jboss_vars.yml
+
+#  vars_prompt:
+#     - name: "application"
+#       prompt: "Cosa Vuoi Fare?\n1- Installare JDK\n2- Installare JBOSS\n3- Configurare JBOSS\n4- Deployment Application\n5- Patching JBOSS\n"
+#       private: no
+
+  roles:
+     - {role: jdk, when: application1 == "1" }
+     - {role: jboss, when: application2 == "1" }
+     - {role: deployment, when: application3 == "1" }
+     - {role: patching, when: application4 == "1" }
+
+       #  roles:
+       #- role: managment_ejb_wls
+

@@ -1,0 +1,8 @@
+- unzip JBOSS
+
+- copiare in 2 directory diversi la dir domain ( una in masater, l' altra nel
+  controllse, di solito l' host
+
+- creare la user application management
+
+

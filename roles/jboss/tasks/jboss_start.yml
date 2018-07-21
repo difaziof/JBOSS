@@ -1,0 +1,35 @@
+- name: run admin on master
+  shell: "{{ jboss_home }}/scripts/jboss-eap-master.sh start"
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Wait for master to startup
+  wait_for:
+    delay: 40
+    timeout: 60
+    path: "{{jboss_home}}/scripts/stdout_jboss_start.out"
+    search_regex: 'OK'
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: run server on slave1
+  shell: "{{ jboss_home }}/scripts/jboss-eap-{{ansible_hostname}}.sh start"
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Wait for slave1 to startup
+  wait_for:
+    delay: 40
+    timeout: 60
+    path: "{{jboss_home}}/scripts/stdout_{{ansible_hostname}}_jboss_start.out"
+    search_regex: 'OK'
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: run server on slave2
+  shell: "{{ jboss_home }}/scripts/jboss-eap-{{ansible_hostname}}.sh start"
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: Wait for slave2 to startup
+  wait_for:
+    delay: 40
+    timeout: 60
+    path: "{{jboss_home}}/scripts/stdout_{{ansible_hostname}}_jboss_start.out"
+    search_regex: 'OK'
+  when: inventory_hostname == groups['jboss-servers'][1]

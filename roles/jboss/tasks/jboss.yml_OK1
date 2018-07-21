@@ -1,0 +1,80 @@
+---
+
+
+
+- name: Bootstrap jboss-eap
+#  #get_url: url=http://docker.systemerror.co.za/src/{{ jboss_ver }}.tar.bz2 dest=/opt/{{ jboss_ver }}.tar.bz2
+  copy: src={{ jboss_zip }}.zip dest=/data/jboss/{{ jboss_zip }}.zip owner={{ jboss_user }} group={{ jboss_user }} mode=0644
+
+- name: unarchive /data/jboss/{{ jboss_zip }}.zip
+  unarchive:
+    src: "/data/jboss/{{ jboss_zip }}.zip"
+    dest: "/data/jboss/"
+    owner: "{{ jboss_user }}"
+    group: "{{ jboss_user }}"
+    copy: no
+
+- name: Ensures{{ jboss_home }}/{{ jboss_ver }}/domain dir exists
+  file: path={{ jboss_home }}/{{ jboss_ver }}/domain state=directory recurse=yes
+  
+- name: Ensures {{ jboss_home }}/{{ jboss_ver }}/cluster dir exists
+  file: path={{ jboss_home }}/{{ jboss_ver }}/cluster state=directory recurse=yes
+- name: Copying mgmt-users.properties
+  template: src=mgmt-users.properties dest={{ jboss_home }}/{{ jboss_ver }}/domain/configuration/mgmt-users.properties
+
+- name: Copying domain-master.properties
+  template: src=domain-master.properties dest={{ jboss_home }}/{{ jboss_ver }}/cluster/domain-master.properties
+
+- name: Copying domain-slave.properties
+  template: src=domain-slave.properties dest={{ jboss_home }}/{{ jboss_ver }}/cluster/domain-slave.properties
+
+- name: Copying domain-master.xml
+  template: src=domain-master.xml dest={{ jboss_home }}/{{ jboss_ver }}/domain/configuration/domain-master.xml
+
+- name: Copying domain-slave.xml
+  template: src=domain-slave.xml dest={{ jboss_home }}/{{ jboss_ver }}/domain/configuration/domain-slave.xml
+
+- name: Copying host-master.xml
+  template: src=host-master.xml dest={{ jboss_home }}/{{ jboss_ver }}/domain/configuration/host-master.xml
+
+- name: Copying host-slave.xml
+  template: src=host-slave.xml dest={{ jboss_home }}/{{ jboss_ver }}/domain/configuration/host-slave.xml
+
+- name: Copying domain.conf
+  template: src=domain.conf dest={{ jboss_home }}/{{ jboss_ver }}/bin/domain.conf mode=0660
+
+- name: Copying default-server-logging.properties
+  template: src=default-server-logging.properties dest={{ jboss_home }}/{{ jboss_ver }}/domain/configuration/default-server-logging.properties mode=0660
+
+- name: Copying logging.properties
+  template: src=logging.properties dest={{ jboss_home }}/{{ jboss_ver }}/domain/configuration/logging.properties mode=0660
+
+- name: Copying domain.sh
+  template: src=domain.sh dest={{ jboss_home }}/{{ jboss_ver }}/bin/domain.sh mode=0550
+
+- name: Copying master.sh
+  template: src=master.sh dest={{ jboss_home }}/{{ jboss_ver }}/bin/master.sh mode=0550
+
+- name: Copying slave.sh
+  template: src=slave.sh dest={{ jboss_home }}/{{ jboss_ver }}/bin/slave.sh mode=0550
+
+- name: Cleanup {{ jboss_ver }} archive
+  file: state=absent path="{{ jboss_home }}/{{ jboss_zip }}.zip"
+
+- name: Copying .bash_profile
+  template: src=bash_profile dest=/home/jboss/.bash_profile mode=0644
+
+- name: Change ownership of JBoss installation
+  file: path={{ jboss_home }} owner=jboss group=jboss state=directory recurse=yes
+  
+- name: keep variable
+  shell: echo '{{ jboss_dc }}'
+  register: r
+
+- name: Start Domain Controller
+  command: /data/jboss/{{ jboss_ver }}/bin/master.sh start
+  when: ansible_fqdn == r.stdout
+
+- name: Start Slaves
+  shell: bash -c 'nohup /data/jboss/{{ jboss_ver }}/bin/slave.sh start'
+  when: inventory_hostname != r.stdout

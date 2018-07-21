@@ -1,0 +1,25 @@
+- name: check PACKAGE WAR1 
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c "deployment-info --server-group={{jbossservergroups}}A --name={{PACKAGE}}.war1" --controller={{jboss_dc}}:9990
+  register: output_package_war1
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- debug: var=output_package_war1
+
+- name: undeploy PACKAGE war1
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c 'undeploy {{PACKAGE}}.war1 --server-groups={{jbossservergroups}}A' --controller={{jboss_dc}}:9990
+  register: undeploy_war1
+  when: inventory_hostname == groups['jboss-servers'][0] and output_package_war1.stdout is not defined
+
+- name: deploy "{{PACKAGE}}".war1
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c "deploy {{jboss_home}}/rilasci/{{PACKAGE}}.war --name={{PACKAGE}}.war1 --runtime-name={{PACKAGE}}.war --server-groups={{jbossservergroups}}A" --controller={{jboss_dc}}:9990
+  register: deploy_war1
+  when: inventory_hostname == groups['jboss-servers'][0] 
+
+- name: check PACKAGE WAR1 
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c "deployment-info --server-group={{jbossservergroups}}A --name={{PACKAGE}}.war1" --controller={{jboss_dc}}:9990
+  register: output_package_war1
+  when: inventory_hostname == groups['jboss-servers'][0] and deploy_war1.rc == 0
+
+- debug: var=output_package_war1
+
+

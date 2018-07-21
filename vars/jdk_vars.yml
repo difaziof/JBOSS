@@ -1,0 +1,12 @@
+java_version: 'jdk-8u161'
+java_tar_file: '{{ java_version }}-linux-x64.tar.gz'
+java_install_dir: '/data/AOL_POC'
+java_home: '{{ java_install_dir }}/jdk1.8.0_161'
+java_real_home: '/data/AOL_POC/jdk'
+jdk_path: '{{ java_install_dir }}/jdk/bin'
+java_keystore: '{{ java_install_dir }}/jdk/jre/lib/security/cacerts'
+java_storepass: 'changeit'
+owner: 'jboss'
+group: 'jboss'
+java_extra_certs: 'SKY_Intranet_CA' 
+

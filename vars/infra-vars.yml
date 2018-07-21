@@ -1,0 +1,17 @@
+# Oracle os user and group
+oracle_user: weblogic
+oracle_group: wls
+wls_username: weblogic
+wls_password: tuxedo123
+wls_protocol: t3s
+admin_host: weblogic1
+admin_port: 9002
+package: EJBSiebelAdapter_1
+oracle_base: /sw/weblogic/oracle
+domain_name: SKY_COL
+domain_home: "/sw/weblogic/bea103/user_projects/domains"
+node_manager_listen_port: 5556
+node_manager_listen_address: weblogic2
+admin_server_hostname: weblogic1
+admin_server_port: 9001
+managed_server_port: 9100

@@ -1,0 +1,16 @@
+---
+
+- name: copy over the {{ java_extra_certs }}.cer
+  copy:
+        src: "certificate/{{ java_extra_certs }}.cer"
+        dest: "/tmp/{{ java_extra_certs }}.cer"
+
+- name: import the cert
+  command: "{{ java_real_home}}/bin/keytool -importcert -alias {{ java_extra_certs }} -keystore {{ java_keystore }} -storepass {{ java_storepass }} -file /tmp/{{ java_extra_certs }}.cer -noprompt"
+  register: item_import
+  #  failed_when: "(' already exists' not in item_import.stdout) and ('Certificate was added to keystore' not in item_import.stderr)"
+
+- name: cleanup
+  file:
+    path: /tmp/{{ java_extra_certs }}.cer
+    state: absent

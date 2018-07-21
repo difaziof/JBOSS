@@ -1,0 +1,7 @@
+jboss_version: 'jboss-eap-7.1'
+jboss_tar_file: 'jboss-eap-7.1.0.zip'
+jboss_install_dir: '/data/jboss'
+jboss_real_home: 'jboss-as'
+JBOSS_USER: 'jboss'
+jboss_log: '{{ jboss_install_dir }}/jboss-as/log'
+jboss_mode: 'domain'

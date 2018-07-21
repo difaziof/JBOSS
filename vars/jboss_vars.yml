@@ -1,0 +1,55 @@
+# JBOSS Archive
+jboss_ver: jboss-eap-7.1
+jboss_zip: jboss-eap-7.1.0
+# JBOSS Ports
+jboss_http_port:   9180
+jboss_ajp_port:    8009
+jboss_https_port:  8443
+# JBOSS Cluster
+jdk_home: /data/AOL_POC/jdk
+jboss_user: jboss
+jboss_group: jboss
+jbossadminuser: admin
+jbossadminpassword: Rendering1.
+jboss_home: /data/AOL_POC
+jboss_domain_name: AOL
+jboss_config_dir: /data/jboss/{{ jboss_ver }}
+jbossmulticastaddress: 230.0.0.4
+jboss_domain_base_dir: '{{ jboss_config_dir }}/domain'
+jboss_domain_base_url: file:///data/AOL_POC
+jboss_domain_log_dir: /data/AOL_POC/{{jboss_ver}}/cluster/logs
+jbossgroups: AOL-server-group
+jboss_messaging_cluster_password: changeme
+jboss_dc: preaolapp1
+proxy1: preaolapp1
+proxy2: preaolapp2
+jboss_netty_port: 5445
+jbossjgroupsinitialhosts: "{{ansible_hostname}}[7600],{{ansible_hostname}}[7700]"
+jboss_master_ipv4: 192.168.166.235
+jboss_slave1_ipv4: 192.168.166.235
+jboss_slave2_ipv4: 192.168.166.235
+jboss_socket_binding_portoffset: 0
+jbossservergroups: AOL-cluster
+jbossprofile: ha
+jbossprofilesockets: ha-sockets
+jboss_jgroups_stack: tcp
+jbossmulticastport: 7600
+jbossdomainpassword: render
+jboss_domain_login_user: slave
+cluster_nodes: "{{ groups['jboss-servers'] }}"
+# JVM
+jbossmasterxms: Xms64m
+jbossmasterxmx: Xmx512m
+jbosscontrollerxms: -Xms512m
+jbosscontrollerxmx: -Xmx512m
+# SYSLOG
+#jboss_rsyslog: elk01.systemerror.co.za
+PACKAGE: AolDemo
+jboss_eap_patch_file: 'jboss-eap-7.1.1-patch.zip'
+jboss_eap_download_dir: '{{ jboss_home }}/patching'
+jboss_eap_jboss_home: '{{ jboss_home }}/jboss-eap'
+MAX_HEAP_SERVER: 1024
+MIN_HEAP_SERVER: 512
+MULTICAST1: 231.6.8.16
+MULTICAST2: 231.5.9.17
+

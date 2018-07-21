@@ -1,0 +1,2 @@
+- include: patching.yml
+- include: restart.yml

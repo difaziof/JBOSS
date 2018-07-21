@@ -1,0 +1,58 @@
+- set_fact: slave='{{hostvars[groups["jboss-servers"][0]].slave}}'
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- set_fact: slave='{{hostvars[groups["jboss-servers"][1]].slave}}'
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: cli jboss remote_destination_outbound_socket_binding
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/socket-binding-group={{jbossprofilesockets}}/remote-destination-outbound-socket-binding=proxy1:add(host={{groups['jboss-servers'][0]}},port=16666)' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy1 is defined
+
+- name: cli jboss remote_destination_outbound_socket_binding
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/socket-binding-group={{jbossprofilesockets}}/remote-destination-outbound-socket-binding=proxy2:add(host={{groups['jboss-servers'][1]}},port=16666)' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy2 is defined
+
+- name: cli jboss Servers Group Add A
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}A:add (profile={{jbossprofile}}, socket-binding-group={{jbossprofilesockets}})' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy1 is defined
+
+- name: cli jboss Servers Group Add B
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}B:add (profile={{jbossprofile}}, socket-binding-group={{jbossprofilesockets}})' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy2 is defined
+
+- name: properties Servers Group Add A
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}A/system-property=jboss.cluster.tcp.initial_hosts:add(value="{{groups['jboss-servers'][0]}}[7600],{{groups['jboss-servers'][1]}}[7600]")' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy1 is defined
+
+- name: properties Servers Group Add B
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/server-group={{jbossservergroups}}B/system-property=jboss.cluster.tcp.initial_hosts:add(value="{{groups['jboss-servers'][0]}}[7600],{{groups['jboss-servers'][1]}}[7600]")' --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0] and proxy2 is defined
+
+- name: "slave1 add MANAGED_SERVER1A"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/host=slave1/server-config=MANAGED_SERVER1A:add(group={{jbossservergroups}}A,auto-start=true,socket-binding-port-offset=100)' --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: "slave1 add MANAGED_SERVER1B"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/host=slave1/server-config=MANAGED_SERVER1B:add(group={{jbossservergroups}}B,auto-start=true,socket-binding-port-offset=200)' --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: "slave2 add MANAGED_SERVER2A"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/host=slave2/server-config=MANAGED_SERVER2A:add(group={{jbossservergroups}}A,auto-start=true,socket-binding-port-offset=100)' --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: "slave2 add MANAGED_SERVER2B"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c '/host=slave2/server-config=MANAGED_SERVER2B:add(group={{jbossservergroups}}B,auto-start=true,socket-binding-port-offset=200)' --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: Reload Controller "{{slave}}"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c "/host=slave1:reload" --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Reload Controller "{{slave}}"
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-{{ansible_hostname}}.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c "/host=slave2:reload" --controller={{jboss_dc}}:9990 --user={{jbossadminuser}} --password={{ jbossadminpassword }}
+  when: inventory_hostname == groups['jboss-servers'][1]
+
+- name: Reload Domain Controller
+  shell: . {{ jboss_home }}/jboss-eap/jboss.conf.d/jboss-master.conf; cd {{jboss_home}}/jboss-eap/bin && ./jboss-cli.sh -c "/host=master:reload" --controller={{jboss_dc}}:9990
+  when: inventory_hostname == groups['jboss-servers'][0]
+

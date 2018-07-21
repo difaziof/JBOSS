@@ -1,0 +1,3 @@
+- include: copy_war.yml
+- include: deployment_war1.yml
+- include: deployment_war2.yml

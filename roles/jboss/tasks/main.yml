@@ -1,0 +1,5 @@
+
+- include: jboss.yml
+- include: jboss_start.yml
+- include: jboss_cli.yml
+- include: jboss_restart.yml

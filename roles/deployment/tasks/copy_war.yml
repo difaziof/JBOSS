@@ -1,0 +1,10 @@
+- name: Ensures {{jboss_home}}/rilasci dir exists
+  file: path={{jboss_home}}/rilasci state=directory
+  when: inventory_hostname == groups['jboss-servers'][0]
+
+- name: Copy file package
+  copy:
+    src: "files/{{PACKAGE}}.war"
+    dest: "{{jboss_home}}/rilasci"
+  when: inventory_hostname == groups['jboss-servers'][0]
+    #and localwar.stat.md5 != remotewar.stat.md5

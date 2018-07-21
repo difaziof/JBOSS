@@ -1,0 +1,16 @@
+---
+
+
+
+  
+- name: keep variable
+  shell: echo '{{ jboss_dc }}'
+  register: r
+
+- name: Start Domain Controller
+  command: /data/jboss/{{ jboss_ver }}/bin/master.sh start
+  when: ansible_fqdn == r.stdout
+
+- name: Start Slaves
+  shell: bash -c 'nohup /data/jboss/{{ jboss_ver }}/bin/slave.sh start'
+  when: inventory_hostname != r.stdout

@@ -1,0 +1,39 @@
+---
+- name: check_jdk_source
+  local_action: stat path=../files/{{ java_tar_file }}
+  register: source_jdk_tar_gz
+
+- name: check if the java_home exists
+  stat: path="{{ java_real_home }}"
+  register: java_real_home_check
+
+- name: copy source jdk
+  copy: src=files/{{ java_tar_file }} dest={{ java_install_dir }} owner={{ owner }} group={{ group }} mode=0644
+
+
+- name: unarchive {{ java_tar_file }}
+  unarchive:
+    src: "{{ java_install_dir }}/{{ java_tar_file }}"
+    dest: "{{ java_install_dir }}"
+    owner: "{{ owner }}"
+    group: "{{ group }}"
+    copy: no
+  when: java_real_home_check.stat.isdir is not defined or not java_real_home_check.stat.isdir
+
+- name: create link simbolic
+  shell: cd {{ java_install_dir }} && ln -s {{ java_home }} jdk
+
+- name: delete sorgente jdk
+  file: state=absent path="{{ java_install_dir }}/{{ java_tar_file }}"
+
+- name: change PATH jdk user jboss
+  lineinfile: >
+   dest=/data/jboss/.bashrc
+   state=present
+   backrefs=yes
+   regexp='PATH=(["]*)((?!.*?{{jdk_path}}).*?)(["]*)$'
+   line="PATH={{jdk_path}}:\1\2\3"
+
+- name: Set Java HOME
+  lineinfile: dest=/data/jboss/.bashrc regexp='^JAVA_HOME'> line="export JAVA_HOME={{ java_install_dir }}/jdk"
+
