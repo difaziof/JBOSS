@@ -1,17 +1,17 @@
 [all:vars]
-ansible_port=10100
+ansible_port=22
 ansible_ssh_user=jboss
 
 [testing]
 colwebsvn.sky.local
 
 [jboss-servers]
-colwebsvn slave=slave1 app=1
-esealfrescorm01 slave=slave2 app=2 
+jboss slave=slave1 app=1
+jboss slave=slave2 app=2 
 
 [jboss-dc]
-colwebsvn.sky.local
+jboss
 
 [jboss-slaves]
-colwebsvn.sky.local
+jboss
 
